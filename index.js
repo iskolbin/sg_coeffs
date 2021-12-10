@@ -45,7 +45,7 @@ const updateCoeffs = (v, i, j) => {
 	byId("json_coeffs").innerHTML = JSON.stringify(state.frequencies);
 	worker.onmessage = function({data:{rtp, ge_win_games_prob}}) {
 		byId("mc").innerHTML = `${rtp*100.0}%`;
-		byId("log").innerHTML = Object.entries(ge_win_games_prob).map(([k, prob]) => `<b>>=${k/100.0}</b> ${(prob*100).toFixed(FLOAT_DIGITS)}%<br>`).join("\n");
+		byId("log").innerHTML = Object.entries(ge_win_games_prob).map(([k, prob]) => `<b>>=${k}</b> ${(prob*100).toFixed(FLOAT_DIGITS)}%<br>`).join("\n");
 	}
 }
 
