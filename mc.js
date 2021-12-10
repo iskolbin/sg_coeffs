@@ -37,7 +37,7 @@ onmessage = function({data: state}) {
 				win_in_game += win;
 			}
 			for (const k of kk) {
-				if (win_in_game > k) ge_win_games[k] += 1;
+				if (win_in_game >= k) ge_win_games[k] += 1;
 			}
 		}
 		bets += CHUNK;
