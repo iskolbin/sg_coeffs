@@ -71,7 +71,7 @@ rtp_section.appendChild(json_coeffs);
 const updateRTP = (id, wins, frequencies) => {
 	const rtp_ = frequencies.reduce((rtp, line) => {
 		const n = line.reduce((s, freq) => s + freq, 0);
-		if (n === 0) return 0;
+		if (n === 0) return rtp;
 		return rtp + line.reduce((s, freq, i) => s + freq * wins[i] / (n * 100.0), 0);
 	}, 0)
 	byId(id).innerHTML = `${rtp_*100.0}%`;
