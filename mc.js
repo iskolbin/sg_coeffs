@@ -31,6 +31,7 @@ onmessage = function({data: state}) {
 		for (let i = 0; i < CHUNK; i++) {
 			let win_in_game = 0;
 			for (const ws of wws) {
+				if (ws.length === 0) continue;
 				const win = ws[(Math.random() * ws.length)|0];
 				wins_ += win / 100.0;
 				win_in_game += win;
