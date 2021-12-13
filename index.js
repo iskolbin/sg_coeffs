@@ -15,7 +15,6 @@ const element = (element, attributes = {}, innerHTML = undefined) => {
 	return e;
 }
 
-
 let worker = null;
 const createTable = (id, header, lines) => element("div", {id, "class": "table-container"}); 
 const updateTable = (id, header, lines, callback) => byId(id).innerHTML = `
@@ -33,40 +32,63 @@ let state = {
 		[0,  0, 0, 0,  0, 0, 0, 0, 0, 0, 0,1000,900, 9, 9,   8,   8,  7, 6, 5, 4, 4, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0],
 		[0,  0, 0, 0,  0, 0, 0, 0, 0, 0, 0,   0,  0, 0, 0,4300,2500,140,13,12,11,10,10, 9, 8, 5, 4, 3, 2, 1, 1, 1]
 	],
+	ge_win_games_keys: [10, 50, 75, 100, 125, 150, 200, 250, 300, 500, 1000, 3000, 9000],
+	chunk_size: 1<<16,
 };
 
-const updateCoeffs = (v, i, j) => {
+const rtp_str = (arr) => arr.map((v,i) => "<b>" + String(i+1) + "</b>:" + (v*100).toFixed(FLOAT_DIGITS) + "%").join(", ");
+
+const updateFrequencies = (v, i, j) => {
 	if (String(v) === "NaN") return;	
-	state.frequencies[i][j] = v
+	state.frequencies[i][j] = v;
 	updateRTP("rtp", state.wins, state.frequencies);
 	if (worker) worker.terminate();
 	worker = new Worker("mc.js");
 	worker.postMessage(state);
-	byId("json_coeffs").innerHTML = JSON.stringify(state.frequencies);
+	byId("state_json").value = JSON.stringify(state);
 	worker.onmessage = function({data:{rtp, ge_win_games_prob}}) {
-		byId("mc").innerHTML = `${rtp*100.0}%`;
-		byId("log").innerHTML = Object.entries(ge_win_games_prob).map(([k, prob]) => `<b>>=${k}</b> ${(prob*100).toFixed(FLOAT_DIGITS)}%<br>`).join("\n");
+		byId("mc_direct").innerHTML = rtp_str(rtp.direct);
+		byId("mc_sorted").innerHTML = rtp_str(rtp.sorted);
+		byId("log").innerHTML = "<br><b>direct</b><br>" +
+			"<div class=\"table-container\"><table class=\"table is-bordered is-narrow\">" +
+			"<thead><tr><td><b>N</b></td><td><b>" + state.ge_win_games_keys.join("</b></td><td><b>") + "</b></td></thead></tr><tbody>" +
+			ge_win_games_prob.direct.map((k_prob, i) => "<tr><td><b>" + (i+1) + "</b></td><td>" + state.ge_win_games_keys.map(k => (k_prob[k]*100).toFixed(3) + "%").join("</td><td>") + "</td></tr>").join("") +
+			"</tbody></table></div>" +
+			"<br><b>sorted</b><br>" +
+			"<div class=\"table-container\"><table class=\"table is-bordered is-narrow\">" +
+			"<thead><tr><td><b>N</b></td><td><b>" + state.ge_win_games_keys.join("</b></td><td><b>") + "</b></td></thead></tr><tbody>" +
+			ge_win_games_prob.sorted.map((k_prob, i) => "<tr><td><b>" + (i+1) + "</b></td><td>" + state.ge_win_games_keys.map(k => (k_prob[k]*100).toFixed(3) + "%").join("</td><td>") + "</td></tr>").join("") +
+			"</tbody></table></div><br>"
 	}
 }
 
-const coeffs_section = element("section", {"class": "section"});
-coeffs_section.appendChild(createTable("coeffs"));
+const frequencies_section = element("section", {"class": "section"});
+frequencies_section.appendChild(createTable("frequencies"));
 
-const rtp_element = element("div", {}, "RTP ");
+const rtp_element = element("div", {}, "RTP max ");
 rtp_element.appendChild(element("span", {"id": "rtp", "class": "tag is-primary is-medium"}));
 
-const mc_element = element("div", {}, "MC  ");
-mc_element.appendChild(element("span", {"id": "mc", "class": "tag is-info is-medium"}));
+const mcd_element = element("div", {}, "MC direct ");
+mcd_element.appendChild(element("span", {"id": "mc_direct", "class": "tag is-info is-medium"}));
+const mcs_element = element("div", {}, "MC sorted ");
+mcs_element.appendChild(element("span", {"id": "mc_sorted", "class": "tag is-info is-medium"}));
 
 const log = element("div", {"id":"log"});
 
-const json_coeffs = element("div", {"id":"json_coeffs"});
+const state_json = element("textarea", {"rows":5, "class": "textarea is-primary","id":"state_json"});
+state_json.onchange = () => {
+	state = JSON.parse(state_json.value);
+	updateTable("frequencies", state.wins, state.frequencies, "updateFrequencies");
+	updateFrequencies(state.frequencies[0][0], 0, 0);
+}
 
 const rtp_section = element("section", {"class": "section"});
 rtp_section.appendChild(rtp_element);
-rtp_section.appendChild(mc_element);
+rtp_section.appendChild(mcd_element);
+rtp_section.appendChild(mcs_element);
 rtp_section.appendChild(log);
-rtp_section.appendChild(json_coeffs);
+rtp_section.appendChild(element("div", {}, "<b>State</b>"));
+rtp_section.appendChild(state_json);
 
 const updateRTP = (id, wins, frequencies) => {
 	const rtp_ = frequencies.reduce((rtp, line) => {
@@ -77,7 +99,7 @@ const updateRTP = (id, wins, frequencies) => {
 	byId(id).innerHTML = `${rtp_*100.0}%`;
 }
 
-byId("content").appendChild(coeffs_section);
+byId("content").appendChild(frequencies_section);
 byId("content").appendChild(rtp_section);
-updateTable("coeffs", state.wins, state.frequencies, "updateCoeffs");
-updateCoeffs(state.frequencies[0][0], 0, 0);
+updateTable("frequencies", state.wins, state.frequencies, "updateFrequencies");
+updateFrequencies(state.frequencies[0][0], 0, 0);
