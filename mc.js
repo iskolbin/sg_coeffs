@@ -25,7 +25,9 @@ onmessage = function({data: state}) {
 			ge_win_games.direct[i][k] = ge_win_games.sorted[i][k] = ge_win_games_prob.direct[i][k] = ge_win_games_prob.sorted[i][k] = 0;
 		}
 	}
-	while (true) {
+	let simulation_steps = state.simulation_steps;
+	if (!simulation_steps || simulation_steps < 0) simulation_steps = Infinity;
+	for (step = 0; step < simulation_steps; step++) {
 		let win_in_game = {direct: Array(N), sorted: Array(N)};
 		for (let i = 0; i < chunk_size; i++) {
 			win_in_game.direct.fill(0);

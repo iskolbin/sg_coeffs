@@ -34,13 +34,12 @@ let state = {
 	],
 	ge_win_games_keys: [10, 50, 75, 100, 125, 150, 200, 250, 300, 500, 1000, 3000, 9000],
 	chunk_size: 1<<16,
+	simulation_steps: 0,
 };
 
 const rtp_str = (arr) => arr.map((v,i) => "<b>" + String(i+1) + "</b>:" + (v*100).toFixed(FLOAT_DIGITS) + "%").join(", ");
 
-const updateFrequencies = (v, i, j) => {
-	if (String(v) === "NaN") return;	
-	state.frequencies[i][j] = v;
+const resetSimulation = () => {
 	updateRTP("rtp", state.wins, state.frequencies);
 	if (worker) worker.terminate();
 	worker = new Worker("mc.js");
@@ -60,6 +59,12 @@ const updateFrequencies = (v, i, j) => {
 			ge_win_games_prob.sorted.map((k_prob, i) => "<tr><td><b>" + (i+1) + "</b></td><td>" + state.ge_win_games_keys.map(k => (k_prob[k]*100).toFixed(3) + "%").join("</td><td>") + "</td></tr>").join("") +
 			"</tbody></table></div><br>"
 	}
+}
+
+const updateFrequencies = (v, i, j) => {
+	if (String(v) === "NaN") return;
+	state.frequencies[i][j] = v;
+	resetSimulation();
 }
 
 const frequencies_section = element("section", {"class": "section"});
@@ -82,13 +87,39 @@ state_json.onchange = () => {
 	updateFrequencies(state.frequencies[0][0], 0, 0);
 }
 
+function readStateFromJSON() {
+	try {
+		state = JSON.parse(byId("state_json").value);
+		byId("simulation_steps").value = state.simulation_steps;
+		byId("chunk_size").value = state.chunk_size;
+	} catch (e) {
+		alert(`Cannot parse state: ${e}`);
+	}
+}
+
+function updateSimulationSteps() {
+	try {
+		state.simulation_steps = JSON.parse(byId("simulation_steps").value);
+		state.chunk_size = JSON.parse(byId("chunk_size").value);
+		resetSimulation();
+	} catch (e) {
+		alert(`Cannot parse simulation_steps: ${e}`);
+	}
+}
+
 const rtp_section = element("section", {"class": "section"});
+rtp_section.appendChild(element("button", {"onclick": "resetSimulation();"}, "<b>Reset</b>"));
+rtp_section.appendChild(element("span", {}, " steps(0 - infinite) "));
+rtp_section.appendChild(element("input", {"style": "max-width: 90px", "id": "simulation_steps", "value": "0", "onchange": "updateSimulationSteps();"}));
+rtp_section.appendChild(element("span", {}, " chunk "));
+rtp_section.appendChild(element("input", {"style": "max-width: 90px", "id": "chunk_size", "value": "65536", "onchange": "updateSimulationSteps();"}));
 rtp_section.appendChild(rtp_element);
 rtp_section.appendChild(mcd_element);
 rtp_section.appendChild(mcs_element);
 rtp_section.appendChild(log);
 rtp_section.appendChild(element("div", {}, "<b>State</b>"));
 rtp_section.appendChild(state_json);
+rtp_section.appendChild(element("button", {"onclick": "readStateFromJSON();"}, "<b>Read from JSON</b>"));
 
 const updateRTP = (id, wins, frequencies) => {
 	const rtp_ = frequencies.reduce((rtp, line) => {
